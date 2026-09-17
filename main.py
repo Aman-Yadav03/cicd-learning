@@ -7,7 +7,7 @@ app = FastAPI(title="CI/CD Learning API")
 @app.get("/")
 def home():
     return {
-        "message": "Hello from my CI/CD learning project!"
+    "message": "Hello from my CI/CD learning project!"
     }
 
 
