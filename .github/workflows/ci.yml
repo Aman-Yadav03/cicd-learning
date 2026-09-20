@@ -1,5 +1,5 @@
 
-name: CI and Push to ECR
+name: CI, Push to ECR, Deploy to ECS
 
 on:
   push:
@@ -67,3 +67,29 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker push ${REGISTRY}/cicd-learning:${IMAGE_TAG}
+
+      - name: Download current ECS task definition
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition cicd-learning \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update task definition with new image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: cicd-learning
+          image: 785716434565.dkr.ecr.ap-south-1.amazonaws.com/cicd-learning:${{ github.sha }}
+
+      - name: Deploy to ECS
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: cicd-learning-service
+          cluster: cicd-learning-cluster
+          wait-for-service-stability: true
